@@ -6,12 +6,11 @@ Implementation of the original transformer from [Attention is All You Need](http
 
 ## Dev Environment
 ### Mac 
-Use [conda](https://docs.astral.sh/uv/#the-pip-interface) for virtual env management. 
+Use [conda](https://docs.conda.io/projects/conda/en/stable/user-guide/install/macos.html) for virtual env management. 
 
 ~~~bash 
 # Create venv 
 conda create --name frills_p311 python=3.11 --yes
-
 conda deactivate; conda activate frills_p311
 
 # install requirements 
