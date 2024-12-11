@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+# TODO(jfreeman)
 class AddNorm(nn.Module):
     def __init__(self):
         pass
