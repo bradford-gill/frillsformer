@@ -3,12 +3,36 @@
 import torch
 import torch.nn as nn
 
+from layers import attention
+from layers.attention import Attention
+
+
 class MultiHeadAttention(nn.Module):
-    def __init__(self,):
+    def __init__(
+        self,
+        dim_k: int = 64,
+        dim_v: int = 64,
+        height: int = 8,
+    ):
         super(MultiHeadAttention, self).__init__()
-        raise NotImplementedError("The __init__ method is not implemented yet.")
-        
-    def forward(self, query, key, value, mask=None):
+
+        self.height = height
+
+        self.dim_k = dim_k
+        self.dim_v = dim_v
+
+        self.attn_heads = [
+            Attention(dim_k=dim_k, dim_v=dim_v,)
+            for _ in range(height)
+        ]
+
+    def forward(
+        self,
+        query,
+        key,
+        value,
+        mask=None,
+    ):
         """Forward layer on MHA
 
         Parameters
@@ -22,4 +46,5 @@ class MultiHeadAttention(nn.Module):
         mask : _type_, optional
             _description_, by default None
         """
-        raise NotImplementedError("The forward method is not implemented yet.")
+        
+        x = torch.concat([head(query, key, value) for head in self.attn_heads])
