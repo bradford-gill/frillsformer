@@ -4,7 +4,14 @@ Python based implementation of the original transformer from [Attention is All Y
 
 ## Data
 
-## Dev Environment
+## Running Tests
+~~~bash
+pytest <pathtofile>
+~~~
+i.e. pytest tests/src/layers/test_feed_forward.py
+
+
+## Dev Environment Setup
 ### Mac 
 Use [conda](https://docs.conda.io/projects/conda/en/stable/user-guide/install/macos.html) for virtual env management. 
 

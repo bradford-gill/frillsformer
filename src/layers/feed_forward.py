@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class FeedForward(nn.Module):
     """
     The feed forward layer is a component of the Transformer used to process each token independently
@@ -15,6 +16,7 @@ class FeedForward(nn.Module):
         y = hW2 + b2
 
     """
+
     def __init__(self, d_model: int, d_ffn: int, dropout: float = 0.1) -> None:
         """
         Initializes the feed-forward layer component
@@ -36,7 +38,6 @@ class FeedForward(nn.Module):
 
         # Dropout for regularization
         self.dropout = nn.Dropout(dropout)
-
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
