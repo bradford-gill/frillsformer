@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class AddNorm(nn.Module):
     """
-    The AddNorm layer is a component of the Transformer used to stablize and enhance learning.
+    The AddNorm layer is a component of the Transformer used to stabilize and enhance learning.
     It comes the output of a sublayer (either Attention or FeedForward) with the original input
     then ensures that the combination is balanced.
 
@@ -11,7 +11,7 @@ class AddNorm(nn.Module):
     Given x, the input vector & sublayer_output, the output from the current sublayer
 
     1. Add the input with the sublayer output
-        resid = x = sublayer_output
+        resid = x + sublayer_output
     2. Normalize to balance the result
         y = LayerNorm(resid)
     """
