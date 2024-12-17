@@ -2,7 +2,6 @@ import unittest
 import torch
 from src.layers import FeedForward
 
-
 class TestFeedForward(unittest.TestCase):
 
     def test_feed_forward_shapes(self):
