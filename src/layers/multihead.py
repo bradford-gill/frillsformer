@@ -3,9 +3,7 @@
 import torch
 import torch.nn as nn
 
-from src.layers import scaled_dot
 from src.layers.scaled_dot import ScaledDotProduct
-
 
 class MultiHeadAttention(nn.Module):
     def __init__(
