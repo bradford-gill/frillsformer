@@ -3,8 +3,8 @@
 import torch
 import torch.nn as nn
 
-from layers import attention
-from layers.attention import Attention
+from src.layers import scaled_dot
+from src.layers.scaled_dot import ScaledDotProduct
 
 
 class MultiHeadAttention(nn.Module):
@@ -22,7 +22,7 @@ class MultiHeadAttention(nn.Module):
         self.dim_v = dim_v
 
         self.attn_heads = [
-            Attention(dim_k=dim_k, dim_v=dim_v,)
+            ScaledDotProduct(dim_k=dim_k, dim_v=dim_v,)
             for _ in range(height)
         ]
 
@@ -46,5 +46,8 @@ class MultiHeadAttention(nn.Module):
         mask : _type_, optional
             _description_, by default None
         """
+        
+        batch_size, seq_length, _ = x.size()
+        
         
         x = torch.concat([head(query, key, value) for head in self.attn_heads])
