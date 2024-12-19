@@ -31,13 +31,13 @@ class ScaledDotProduct(nn.Module):
             tensor of scaled dor product
         """
 
-        x = query * key.T  # Jack: can you check this is sound math?
+        x = torch.matmul(query, key.transpose(-2, -1))
         x = x / torch.sqrt(torch.tensor(self.dim_k, dtype=torch.float32))
-        if x:
+        if x is not None:
             # -9e15 to approx neg infinity -> 0s out in softmax -> (exp(-9e15) ≈ 0)
             x = x.masked_fill(mask == 0, -9e15)
+        
+        attn = f.softmax(x)
+        x = torch.matmul(attn, value)
 
-        x = x * value
-        x = f.softmax(x)
-
-        return x
+        return x, attn

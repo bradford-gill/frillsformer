@@ -4,7 +4,7 @@ from src.layers import ScaledDotProduct
 
 
 class TestScaledDot: 
-    def test_scaled_dot_product():
+    def test_scaled_dot_product(self):
         # Set seed for reproducibility
         torch.manual_seed(0)
 
