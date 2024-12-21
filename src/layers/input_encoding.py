@@ -14,7 +14,6 @@ class InputEncoding(nn.Module):
         different test data. There is an external paper linked:
         See: Jonas Gehring, Michael Auli, David Grangier, Denis Yarats, and Yann N. Dauphin. Convolutional sequence to sequence learning
 
-
     Formula:
         PE(pos, 2i) = sin(pos/10000^(2i/d_model))
         PE(pos, 2i+1) = cos(pos/10000^(2i/d_model))
