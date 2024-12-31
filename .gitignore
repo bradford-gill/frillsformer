@@ -1,0 +1,27 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+myenv/
+
+# VSCode settings
+.vscode/
+
+# Environment variables and sensitive files
+.env
+
+# Log files
+*.log
+
+# Cache files
+*.cache/
+*.tmp/
+
+# Distribution/Build directories
+dist/
+build/
+*.egg-info/
