@@ -30,31 +30,29 @@ class MultiheadAttention(nn.Module):
         self.o_proj.bias.data.fill_(0)
         
     
-    def forward(self, x: torch.Tensor, mask: torch.Tensor, return_attention: bool = False,):
+    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None, return_attention: bool = False,):
         batch_size, seq_length, _ = x.size()
         
         if mask is not None:
             mask = expand_mask(mask)
             
         # Separate Q, K, V from linear output
+        qkv = self.qkv_proj(x)
+        
         qkv = qkv.reshape(batch_size, seq_length, self.num_heads, 3*self.dim_k)
         qkv = qkv.permute(0, 2, 1, 3) # batch, head, seq len, dims
         q, k, v = qkv.chunk(3, dim=-1)
         
         # Determine value outputs
         values, attn = ScaledDotProduct(self.dim_k)(q, k, v, mask=mask)
+        
         values = values.permute(0, 2, 1, 3) # [Batch, SeqLen, Head, Dims]
         values = values.reshape(batch_size, seq_length, self.dim_model)
+        
         o = self.o_proj(values)
         
         return (o, attn) if return_attention else o
-        
-        
-        
-        
-            
-    
-    
+         
     
     
 def expand_mask(mask: torch.Tensor) -> torch.Tensor:

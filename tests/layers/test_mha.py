@@ -1,3 +1,4 @@
+import test
 import torch
 import pytest
 from src.layers.mulithead_attention import MultiheadAttention  # Replace with the actual path
@@ -45,4 +46,4 @@ def test_multihead_attention():
     assert output.shape == (batch_size, seq_length, dim_model), "Output shape mismatch with broadcasted mask"
 
 if __name__ == "__main__":
-    pytest.main(["-v", __file__])
+    test_multihead_attention()
