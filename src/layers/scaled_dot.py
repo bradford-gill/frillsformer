@@ -38,6 +38,7 @@ class ScaledDotProduct(nn.Module):
             # -9e15 to approx neg infinity -> 0s out in softmax -> (exp(-9e15) ≈ 0)
             x = x.masked_fill(mask == 0, -9e15)
         
+        # Apply softmax along the last dimension (-1) to normalize the scores
         attn = f.softmax(x)
         x = torch.matmul(attn, value)
 
