@@ -4,7 +4,7 @@ import torch.nn as nn
 from src.layers.scaled_dot import ScaledDotProduct
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, input_dim: int, num_heads: int = 8, dim_model: int = 512,):
+    def __init__(self, input_dim: int, num_heads: int = 8, dim_model: int = 512):
         super().__init__()
         
         self.num_heads = num_heads
