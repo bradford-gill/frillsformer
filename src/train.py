@@ -1,3 +1,4 @@
+import trace
 import torch
 import tqdm
 import torch.nn as nn
@@ -41,48 +42,53 @@ class ToyDataset(Dataset):
     def __getitem__(self, idx):
         return self.data[idx]
 
-# Hyperparameters
-input_dim = 50
-embed_dim = 32
-n_heads = 2
-num_encoder_layers = 2
-num_decoder_layers = 2
-ff_dim = 64
-max_seq_length = 20
-num_classes = 50
-batch_size = 16
-epochs = 10
-learning_rate = 0.001
 
-# Data
-train_dataset = ToyDataset(num_samples=1000, seq_length=max_seq_length, vocab_size=input_dim)
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+def train(
+    input_dim = 50,
+    embed_dim = 32,
+    n_heads = 2,
+    num_encoder_layers = 2,
+    num_decoder_layers = 2,
+    ff_dim = 64,
+    max_seq_length = 20,
+    num_classes = 50,
+    batch_size = 16,
+    epochs = 10,
+    learning_rate = 0.001,):
 
-# Model, optimizer, and loss
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = DummyTransformerModel(input_dim, embed_dim, n_heads, num_encoder_layers, num_decoder_layers, ff_dim, max_seq_length, num_classes).to(device)
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    # Data
+    train_dataset = ToyDataset(num_samples=1000, seq_length=max_seq_length, vocab_size=input_dim)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-# Training loop
-for epoch in range(epochs):
-    model.train()
-    total_loss = 0
-    
-    progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
-    for src, tgt in progress_bar:
-        src, tgt = src.to(device), tgt.to(device)
+    # Model, optimizer, and loss
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = DummyTransformerModel(input_dim, embed_dim, n_heads, num_encoder_layers, num_decoder_layers, ff_dim, max_seq_length, num_classes).to(device)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Training loop
+    for epoch in range(epochs):
+        model.train()
+        total_loss = 0
         
-        optimizer.zero_grad()
-        output = model(src, tgt)
-        # Shift target for decoder (typical seq2seq structure)
-        loss = cross_entropy(output.view(-1, num_classes), tgt.view(-1))
-        loss.backward()
-        optimizer.step()
-        
-        total_loss += loss.item()
-        
-        progress_bar.set_postfix({"Loss": loss.item()})
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
+        for src, tgt in progress_bar:
+            src, tgt = src.to(device), tgt.to(device)
+            
+            optimizer.zero_grad()
+            output = model(src, tgt)
+            # Shift target for decoder (typical seq2seq structure)
+            loss = cross_entropy(output.view(-1, num_classes), tgt.view(-1))
+            loss.backward()
+            optimizer.step()
+            
+            total_loss += loss.item()
+            
+            progress_bar.set_postfix({"Loss": loss.item()})
 
-    print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss/len(train_loader):.4f}")
+        print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss/len(train_loader):.4f}")
 
-print("Training complete")
+    print("Training complete")
+
+
+if __name__ == "__main__":
+    train()
