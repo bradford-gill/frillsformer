@@ -71,7 +71,7 @@ def train(
         model.train()
         total_loss = 0
         
-        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
+        progress_bar = tqdm.tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
         for src, tgt in progress_bar:
             src, tgt = src.to(device), tgt.to(device)
             
