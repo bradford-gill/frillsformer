@@ -27,6 +27,8 @@ class MultiheadAttention(nn.Module):
         self.qkv_proj = nn.Linear(input_dim, 3 * dim_model)
         self.o_proj = nn.Linear(dim_model, dim_model)
 
+        self.scaled_dot_product = ScaledDotProduct(self.dim_k)
+
         self._reset_parameters()
 
     def _reset_parameters(self):
@@ -64,15 +66,26 @@ class MultiheadAttention(nn.Module):
             mask = expand_mask(mask)
 
         qkv = self.qkv_proj(x)
+        print(f"qkv shape: {qkv.shape}")  # Should be [batch_size, seq_length, 3 * dim_model]
+
         q, k, v = torch.chunk(qkv, 3, dim=-1)
            
         q = q.view(batch_size, seq_length, self.num_heads, self.dim_k).permute(0, 2, 1, 3)
-        k = k.view(batch_size, context.size(1), self.num_heads, self.dim_k).permute(0, 2, 1, 3)
-        v = v.view(batch_size, context.size(1), self.num_heads, self.dim_k).permute(0, 2, 1, 3)
+
+        k_seq_length = context.size(1) if context is not None else seq_length
+        k = k.view(batch_size, k_seq_length, self.num_heads, self.dim_k).permute(0, 2, 1, 3)
+
+        v_seq_length = context.size(1) if context is not None else seq_length
+
+        v = v.view(batch_size, v_seq_length, self.num_heads, self.dim_k).permute(0, 2, 1, 3)
+
+        print(f"q shape before reshape: {q.shape}")  # Should be [batch_size, num_heads, seq_length, dim_model]
+        print(f"k shape before reshape: {k.shape}")  # Should be [batch_size, num_heads, seq_length, dim_model]
+        print(f"v shape before reshape: {v.shape}")  # Should be [batch_size, num_heads, seq_length, dim_model]
 
         
         # Determine value outputs
-        values, attn = ScaledDotProduct(self.dim_k)(q, k, v, mask=mask)
+        values, attn = self.scaled_dot_product(q, k, v, mask=mask)
         
         # [Batch, SeqLen, Head, Dims]
         values = values.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_length, self.dim_model)
