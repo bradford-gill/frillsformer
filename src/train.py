@@ -54,7 +54,8 @@ def train(
     num_classes = 50,
     batch_size = 16,
     epochs = 10,
-    learning_rate = 0.001,):
+    learning_rate = 0.001,
+    ):
 
     # Data
     train_dataset = ToyDataset(num_samples=1000, seq_length=max_seq_length, vocab_size=input_dim)
