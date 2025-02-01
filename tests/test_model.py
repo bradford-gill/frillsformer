@@ -34,20 +34,20 @@ class TestTransformer(unittest.TestCase):
         # Check output shape
         self.assertEqual(logits.shape, (self.batch_size, self.tgt_seq_len, self.tgt_vocab_size))
 
-    # def test_masking(self):
-    #     # Test padding mask and look-ahead mask
-    #     src = torch.tensor([[1, 2, 3, 0, 0], [4, 5, 0, 0, 0]])
-    #     tgt = torch.tensor([[1, 2, 0, 0], [3, 4, 5, 0]])
+    def test_masking(self):
+        # Test padding mask and look-ahead mask
+        src = torch.tensor([[1, 2, 3, 0, 0], [4, 5, 0, 0, 0]])
+        tgt = torch.tensor([[1, 2, 0, 0], [3, 4, 5, 0]])
 
-    #     # Generate masks
-    #     src_mask = (src != 0).unsqueeze(1).unsqueeze(2)
-    #     tgt_mask = torch.triu(torch.ones(tgt.size(1), tgt.size(1)), diagonal=1).bool()
+        # Generate masks
+        src_mask = (src != 0).unsqueeze(1).unsqueeze(2)
+        tgt_mask = torch.triu(torch.ones(tgt.size(1), tgt.size(1)), diagonal=1).bool()
 
-    #     # Forward pass with masks
-    #     logits = self.model(src, tgt, src_mask=src_mask, tgt_mask=tgt_mask)
+        # Forward pass with masks
+        logits = self.model(src, tgt, src_mask=src_mask, tgt_mask=tgt_mask)
 
-    #     # Ensure no NaNs in output
-    #     self.assertFalse(torch.isnan(logits).any(), "Output contains NaNs (masking failed?)")
+        # Ensure no NaNs in output
+        self.assertFalse(torch.isnan(logits).any(), "Output contains NaNs (masking failed?)")
 
 if __name__ == "__main__":
     unittest.main()
