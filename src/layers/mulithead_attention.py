@@ -102,6 +102,9 @@ def expand_mask(mask: torch.Tensor) -> torch.Tensor:
     torch.Tensor
         shape -> batch_size, num_heads, seq length, seq length
     """
+    assert mask.ndim >= 2, "Mask must be at least 2-dimensional last two dims seq_length by seq_length"
+
+
     while mask.ndim < 4:
         mask = mask.unsqueeze(1)
     return mask
