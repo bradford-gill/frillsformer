@@ -4,12 +4,21 @@ from src.layers.scaled_dot import ScaledDotProduct
 
 class MultiheadAttention(nn.Module):
     def __init__(self, input_dim: int, num_heads: int = 8, dim_model: int = 512):
+        """
+        Multihead Attention mechanism for Transformers.
+        Args:
+            input_dim (int): Dimension of input features.
+            num_heads (int): Number of attention heads.
+            dim_model (int): Dimension of the output model (must be divisible by num_heads).
+        """
+        
         super().__init__()
+
         self.num_heads = num_heads
         self.dim_model = dim_model
         self.dim_k = dim_model // num_heads
         
-        assert dim_model % num_heads == 0, "dim_model must be divisible by num_heads"
+        assert dim_model % num_heads == 0, "Dim K must be divisible by the number of heads"
         
         # Projections for self-attention (q, k, v all from x)
         self.qkv_proj = nn.Linear(input_dim, 3 * dim_model)
@@ -40,6 +49,16 @@ class MultiheadAttention(nn.Module):
         mask: torch.Tensor = None,
         return_attention: bool = False
     ) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, seq_length, input_dim).
+            context (torch.Tensor): Context tensor ONLY for cross-attention. Defaults to None (self-attention).
+            mask (torch.Tensor): Optional attention mask.
+            return_attention (bool): Whether to return attention weights. Defaults to False.
+        Returns:
+            torch.Tensor: Output tensor of shape (batch_size, seq_length, dim_model).
+            (Optional) torch.Tensor: Attention weights of shape (batch_size, num_heads, seq_length, seq_length).
+        """
         batch_size, seq_length, _ = x.size()
         
         if context is None:
@@ -71,6 +90,18 @@ class MultiheadAttention(nn.Module):
 
 
 def expand_mask(mask: torch.Tensor) -> torch.Tensor:
+    """
+    Support use of different mask shapes, insure that mask has four dimensions
+    Parameters
+    ----------
+    mask : torch.Tensor
+        _description_
+
+    Returns
+    -------
+    torch.Tensor
+        shape -> batch_size, num_heads, seq length, seq length
+    """
     while mask.ndim < 4:
         mask = mask.unsqueeze(1)
     return mask
