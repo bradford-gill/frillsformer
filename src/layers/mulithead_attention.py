@@ -4,20 +4,27 @@ import torch.nn as nn
 from src.layers.scaled_dot import ScaledDotProduct
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, input_dim: int, num_heads: int = 8, dim_model: int = 512,):
+    def __init__(self, input_dim: int, num_heads: int = 8, dim_model: int = 512):
+        """
+        Multihead Attention mechanism for Transformers.
+
+        Args:
+            input_dim (int): Dimension of input features.
+            num_heads (int): Number of attention heads.
+            dim_model (int): Dimension of the output model (must be divisible by num_heads).
+        """
+        
         super().__init__()
         
         self.num_heads = num_heads
         self.dim_model = dim_model
-        
         self.dim_k = dim_model // num_heads
         
         assert dim_model % num_heads == 0, "Dim K must be divisible by the number of heads"
         
         # Stack all weight matrices 1...h together for efficiency
         # Note that in many implementations you see "bias=False" which is optional
-        self.qkv_proj = nn.Linear(input_dim, 3*dim_model)
-        
+        self.qkv_proj = nn.Linear(input_dim, 3 * dim_model)
         self.o_proj = nn.Linear(dim_model, dim_model)
 
         self._reset_parameters()
@@ -25,29 +32,50 @@ class MultiheadAttention(nn.Module):
     def _reset_parameters(self):
         """init params using xavier uniform"""
         nn.init.xavier_uniform_(self.qkv_proj.weight)
-        self.qkv_proj.bias.data.fill_(0)
+        if self.qkv_proj.bias is not None:
+            self.qkv_proj.bias.data.fill_(0)
         nn.init.xavier_uniform_(self.o_proj.weight)
-        self.o_proj.bias.data.fill_(0)
+        if self.o_proj.bias is not None:
+            self.o_proj.bias.data.fill_(0)
         
     
-    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None, return_attention: bool = False,):
+    def forward(self, x: torch.Tensor, context: torch.Tensor = None, mask: torch.Tensor = None, return_attention: bool = False,):
+        """
+        Forward pass for Multihead Attention.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, seq_length, input_dim).
+            context (torch.Tensor): Context tensor ONLY for cross-attention. Defaults to None (self-attention).
+            mask (torch.Tensor): Optional attention mask.
+            return_attention (bool): Whether to return attention weights. Defaults to False.
+
+        Returns:
+            torch.Tensor: Output tensor of shape (batch_size, seq_length, dim_model).
+            (Optional) torch.Tensor: Attention weights of shape (batch_size, num_heads, seq_length, seq_length).
+        """
+        
         batch_size, seq_length, _ = x.size()
+
+        if context is None:
+            # In the event context is None, we have self-attention, so we can use the same input
+            context = x
         
         if mask is not None:
             mask = expand_mask(mask)
-            
-        # Separate Q, K, V from linear output
+
         qkv = self.qkv_proj(x)
-        
-        qkv = qkv.reshape(batch_size, seq_length, self.num_heads, 3*self.dim_k)
-        qkv = qkv.permute(0, 2, 1, 3) # batch, head, seq len, dims
-        q, k, v = qkv.chunk(3, dim=-1)
+        q, k, v = torch.chunk(qkv, 3, dim=-1)
+           
+        q = q.view(batch_size, seq_length, self.num_heads, self.dim_k).permute(0, 2, 1, 3)
+        k = k.view(batch_size, context.size(1), self.num_heads, self.dim_k).permute(0, 2, 1, 3)
+        v = v.view(batch_size, context.size(1), self.num_heads, self.dim_k).permute(0, 2, 1, 3)
+
         
         # Determine value outputs
         values, attn = ScaledDotProduct(self.dim_k)(q, k, v, mask=mask)
         
-        values = values.permute(0, 2, 1, 3) # [Batch, SeqLen, Head, Dims]
-        values = values.reshape(batch_size, seq_length, self.dim_model)
+        # [Batch, SeqLen, Head, Dims]
+        values = values.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_length, self.dim_model)
         
         o = self.o_proj(values)
         
