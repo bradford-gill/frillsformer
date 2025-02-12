@@ -47,6 +47,7 @@ class DecoderBlock(nn.Module):
         x = self.add_norm1(x, self_attn_output)
 
         # Cross-attention and Add&Norm
+        # Since MHA is used for cross_attention as well, this line looks a bit different
         cross_attn_output = self.cross_attention(x, context=encoder_output, mask=memory_mask)
         x = self.add_norm2(x, cross_attn_output)
 

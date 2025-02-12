@@ -67,6 +67,9 @@ class MultiheadAttention(nn.Module):
             q, k, v = torch.chunk(qkv, 3, dim=-1)
         else:
             # Cross-attention: q from x, k/v from context
+            assert context.size(0) == x.size(0), "Context and input must have the same batch size"
+
+
             q = self.q_proj(x)
             kv = self.kv_proj(context)
             k, v = torch.chunk(kv, 2, dim=-1)
@@ -80,6 +83,8 @@ class MultiheadAttention(nn.Module):
         v = reshape(v, v.size(1))  # Use v's sequence length from context
         
         # Compute scaled dot-product attention
+        if mask is not None:
+            mask = expand_mask(mask)
         values, attn = self.scaled_dot_product(q, k, v, mask=mask)
         
         # Concatenate heads and project
@@ -102,9 +107,12 @@ def expand_mask(mask: torch.Tensor) -> torch.Tensor:
     torch.Tensor
         shape -> batch_size, num_heads, seq length, seq length
     """
-    assert mask.ndim >= 2, "Mask must be at least 2-dimensional last two dims seq_length by seq_length"
+    assert mask.ndim >= 2, "Mask must be at least 2-dimensional"
+    # Although we 
+    # assert mask.ndim >= 2 and mask.size(-1) == mask.size(-2), "Mask must be at least 2-dimensional with the last two dims being seq_length x seq_length"
 
-
-    while mask.ndim < 4:
-        mask = mask.unsqueeze(1)
+    if mask.ndim == 2:
+        mask = mask.unsqueeze(0).unsqueeze(0)
+    elif mask.ndim == 3:
+        mask = mask.unsqueeze(1) 
     return mask

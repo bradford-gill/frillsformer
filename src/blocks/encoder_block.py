@@ -26,12 +26,11 @@ class EncoderBlock(nn.Module):
         self.add_norm_2 = AddNorm(embed_dim)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
-        # Self-attention + Add & Norm
-        attn_output = self.self_attention(x, mask=mask)
-        x = self.add_norm_1(x, attn_output)
+        attn_output = self.self_attention(x, mask=mask) # Apply attention on original x
+        x = self.add_norm_1(x, attn_output) # Add and Norm
 
-        # Feedforward + Add & Norm
-        ff_output = self.feed_forward(x)
-        x = self.add_norm_2(x, ff_output)
+        # Pre-Layer Normalization for feed-forward
+        ff_output = self.feed_forward(x) # Apply FF on output of AddNorm from attention
+        x = self.add_norm_2(x, ff_output)  # Add and Norm
         return x
     
