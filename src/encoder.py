@@ -18,7 +18,6 @@ class Encoder(nn.Module):
         self.layers = nn.ModuleList(
             [EncoderBlock(embed_dim, num_heads, ff_dim, dropout) for _ in range(num_layers)]
         )
-        self.norm = nn.LayerNorm(embed_dim)
     
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
@@ -35,5 +34,4 @@ class Encoder(nn.Module):
             x = layer(x, mask)
         
         # Apply a final layer normalization after all encoder blocks
-        x = self.norm(x)
         return x
