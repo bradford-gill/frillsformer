@@ -93,8 +93,8 @@ def main():
     ff_dim = 64         # Feed-forward network dimension.
     dropout = 0.1
     batch_size = 32
-    epochs = 5
-    learning_rate = 0.001
+    epochs = 15
+    learning_rate = 0.0005
 
     # Create the dataset and dataloader.
     dataset = ShakespeareDataset(text, seq_len, char_to_idx)
