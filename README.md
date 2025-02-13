@@ -52,7 +52,6 @@ bash
 docker run --gpus all frillsformer
 ~~~
 
-
 #### Without GPU Support
 
 If you do not have a GPU or do not wish to use it, simply run:

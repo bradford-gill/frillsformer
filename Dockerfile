@@ -16,3 +16,6 @@ COPY . .
 
 # Run the training script.
 CMD ["python", "src/train.py"]
+
+# docker build -t frillsformer .
+# docker run frillsformer
