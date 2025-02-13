@@ -1,4 +1,5 @@
-import trace
+import os
+import requests
 import torch
 import tqdm
 import torch.nn as nn
@@ -6,90 +7,139 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torch.nn.functional import cross_entropy
 
-# Define a small Transformer model, Use our model in next PR
-class DummyTransformerModel(nn.Module):
-    def __init__(self, input_dim, embed_dim, n_heads, num_encoder_layers, num_decoder_layers, ff_dim, max_seq_length, num_classes):
-        super(DummyTransformerModel, self).__init__()
-        self.embedding = nn.Embedding(input_dim, embed_dim)
-        self.positional_encoding = nn.Parameter(torch.zeros(max_seq_length, embed_dim))
-        self.transformer = nn.Transformer(
-            d_model=embed_dim,
-            nhead=n_heads,
-            num_encoder_layers=num_encoder_layers,
-            num_decoder_layers=num_decoder_layers,
-            dim_feedforward=ff_dim,
-        )
-        self.fc = nn.Linear(embed_dim, num_classes)
+from src.model import Transformer  # Import the Transformer from model.py
 
-    def forward(self, src, tgt):
-        # Embed and add positional encoding
-        src = self.embedding(src) + self.positional_encoding[:src.size(1), :]
-        tgt = self.embedding(tgt) + self.positional_encoding[:tgt.size(1), :]
-        output = self.transformer(src.transpose(0, 1), tgt.transpose(0, 1))
-        return self.fc(output.transpose(0, 1))
-
-# Toy dataset
-class ToyDataset(Dataset):
-    def __init__(self, num_samples, seq_length, vocab_size):
-        self.data = [
-            (torch.randint(0, vocab_size, (seq_length,)), torch.randint(0, vocab_size, (seq_length,)))
-            for _ in range(num_samples)
-        ]
-
+class ShakespeareDataset(Dataset):
+    """
+    This dataset converts the raw Shakespeare text into samples of fixed-length.
+    Each sample is a tuple (src, tgt) where:
+      - src: a tensor of token indices of length `seq_len`
+      - tgt: a tensor of token indices of length `seq_len`, shifted right by one position.
+    """
+    def __init__(self, text: str, seq_len: int, char_to_idx: dict):
+        self.seq_len = seq_len
+        self.data = []
+        # Convert text into a list of indices.
+        indices = [char_to_idx[c] for c in text]
+        # Create non-overlapping chunks of (seq_len+1) tokens.
+        for i in range(0, len(indices) - seq_len, seq_len):
+            chunk = indices[i : i + seq_len + 1]
+            if len(chunk) == seq_len + 1:
+                src = torch.tensor(chunk[:-1], dtype=torch.long)
+                tgt = torch.tensor(chunk[1:], dtype=torch.long)
+                self.data.append((src, tgt))
+    
     def __len__(self):
         return len(self.data)
-
+    
     def __getitem__(self, idx):
         return self.data[idx]
 
+def download_shakespeare(file_path: str = "shakespeare_input.txt") -> str:
+    """
+    Downloads the Tiny Shakespeare dataset if it does not already exist.
+    """
+    if not os.path.exists(file_path):
+        print("Downloading Tiny Shakespeare dataset...")
+        url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+        response = requests.get(url)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(response.text)
+    with open(file_path, 'r', encoding='utf-8') as f:
+        text = f.read()
+    return text
 
-def train(
-    input_dim = 50,
-    embed_dim = 32,
-    n_heads = 2,
-    num_encoder_layers = 2,
-    num_decoder_layers = 2,
-    ff_dim = 64,
-    max_seq_length = 20,
-    num_classes = 50,
-    batch_size = 16,
-    epochs = 10,
-    learning_rate = 0.001,
-    ):
+def generate_text(model, prompt: str, char_to_idx, idx_to_char, seq_len: int, device, gen_length: int = 200):
+    """
+    Generates text using greedy decoding.
+    Since our Transformer expects a pair of sequences, we use the prompt as both src and tgt,
+    and then autoregressively generate one token at a time.
+    """
+    model.eval()
+    # Convert the prompt into a tensor of indices.
+    input_ids = [char_to_idx.get(c, 0) for c in prompt]
+    input_tensor = torch.tensor(input_ids, dtype=torch.long).unsqueeze(0).to(device)
+    generated = prompt
 
-    # Data
-    train_dataset = ToyDataset(num_samples=1000, seq_length=max_seq_length, vocab_size=input_dim)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    for _ in range(gen_length):
+        # Ensure the input does not exceed seq_len.
+        current_seq = input_tensor if input_tensor.size(1) <= seq_len else input_tensor[:, -seq_len:]
+        with torch.no_grad():
+            # Provide the same sequence as both source and target.
+            output = model(current_seq, current_seq)
+        # Greedy decoding: select the token with highest probability from the last time step.
+        logits = output[0, -1, :]
+        next_token = torch.argmax(logits).item()
+        generated += idx_to_char[next_token]
+        # Append the new token and continue.
+        input_tensor = torch.cat([input_tensor, torch.tensor([[next_token]], device=device)], dim=1)
+    return generated
 
-    # Model, optimizer, and loss
+def main():
+    # Download and load the Tiny Shakespeare dataset.
+    text = download_shakespeare()
+
+    # Build a character-level vocabulary.
+    chars = sorted(list(set(text)))
+    vocab_size = len(chars)
+    char_to_idx = {ch: i for i, ch in enumerate(chars)}
+    idx_to_char = {i: ch for i, ch in enumerate(chars)}
+
+    # Hyperparameters for our small transformer.
+    seq_len = 64        # Sequence length for each training example.
+    embed_dim = 32      # Small embedding dimension.
+    num_layers = 2      # Use 2 layers for the Transformer.
+    num_heads = 2       # Number of attention heads.
+    ff_dim = 64         # Feed-forward network dimension.
+    dropout = 0.1
+    batch_size = 32
+    epochs = 15
+    learning_rate = 0.0005
+
+    # Create the dataset and dataloader.
+    dataset = ShakespeareDataset(text, seq_len, char_to_idx)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = DummyTransformerModel(input_dim, embed_dim, n_heads, num_encoder_layers, num_decoder_layers, ff_dim, max_seq_length, num_classes).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    print(f"Training on device: {device}")
 
-    # Training loop
+    # Small instance of the Transformer model.
+    model = Transformer(
+        src_vocab_size=vocab_size,
+        tgt_vocab_size=vocab_size,
+        embed_dim=embed_dim,
+        max_seq_len=seq_len,
+        num_layers=num_layers,
+        num_heads=num_heads,
+        ff_dim=ff_dim,
+        dropout=dropout,
+    ).to(device)
+
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    criterion = nn.CrossEntropyLoss()
+
+    # Training loop.
+    model.train()
     for epoch in range(epochs):
-        model.train()
-        total_loss = 0
-        
-        progress_bar = tqdm.tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
+        total_loss = 0.0
+        progress_bar = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}", leave=True)
         for src, tgt in progress_bar:
             src, tgt = src.to(device), tgt.to(device)
-            
             optimizer.zero_grad()
-            output = model(src, tgt)
-            # Shift target for decoder (typical seq2seq structure)
-            loss = cross_entropy(output.view(-1, num_classes), tgt.view(-1))
+            outputs = model(src, tgt)  # Output shape: [batch_size, seq_len, vocab_size]
+            loss = criterion(outputs.view(-1, vocab_size), tgt.view(-1))
             loss.backward()
             optimizer.step()
-            
             total_loss += loss.item()
-            
-            progress_bar.set_postfix({"Loss": loss.item()})
+            progress_bar.set_postfix({"loss": loss.item()})
+        avg_loss = total_loss / len(dataloader)
+        print(f"Epoch {epoch+1}/{epochs} - Avg Loss: {avg_loss:.4f}")
 
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss/len(train_loader):.4f}")
-
-    print("Training complete")
-
+    # Generate sample text after training.
+    prompt = "To be, or not to be: "
+    generated_text = generate_text(model, prompt, char_to_idx, idx_to_char, seq_len, device, gen_length=200)
+    print("\nGenerated Text:")
+    print(generated_text)
 
 if __name__ == "__main__":
-    train()
+    main()
